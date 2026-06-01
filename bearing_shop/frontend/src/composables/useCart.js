@@ -23,24 +23,23 @@ export function useCart() {
     localStorage.setItem('cart', JSON.stringify(cart.value))
   }
 
-  const addToCart = (product, quantity) => {
-    const existingIndex = cart.value.findIndex(item => item.id === product.id)
-    
-    if (existingIndex !== -1) {
-
-      cart.value[existingIndex].quantity += quantity
+    const addToCart = (product, quantity) => {
+    const existing = cart.value.findIndex(item => item.id === product.id)
+    if (existing !== -1) {
+        cart.value[existing].quantity += quantity
     } else {
-      cart.value.push({
+        cart.value.push({
         id: product.id,
         article: product.article,
         name: product.name,
         price: product.price,
-        image_url: product.image_url || '',
-        quantity: quantity
-      })
+        image_url: product.image || '',
+        quantity: quantity,
+        maxStock: product.stock_quantity
+        })
     }
     saveCart()
-  }
+    }
 
   const updateQuantity = (productId, quantity) => {
     const item = cart.value.find(i => i.id === productId)

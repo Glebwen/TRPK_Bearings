@@ -156,3 +156,11 @@ import os
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 STATIC_URL = '/static/'
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.mail.ru'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'gleb_shtyrev@mail.ru'
+EMAIL_HOST_PASSWORD = 'EVbdghCydbewwFf3JCkQ'
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER

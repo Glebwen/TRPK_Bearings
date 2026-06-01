@@ -4,7 +4,7 @@ from .models import (
     StatusHistory, EmailNotification, BearingType, PrecisionClass,
     SealType, Material, Manufacturer, OrderStatus
 )
-
+from .utils import send_order_notification
 
 class BearingTypeSerializer(serializers.ModelSerializer):
     class Meta:
@@ -177,6 +177,8 @@ class OrderCreateSerializer(serializers.Serializer):
 
 
         StatusHistory.objects.create(order=order, old_status=None, new_status=status)
+        send_order_notification(order)
+
 
         self.instance = order
         return order

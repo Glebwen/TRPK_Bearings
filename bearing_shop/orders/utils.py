@@ -3,12 +3,43 @@ from django.conf import settings
 from .models import EmailNotification
 
 def send_order_notification(order):
-    subject = f"Заявка №{order.order_number} создана"
-    body = f"Здравствуйте, {order.customer.name}!\n\nВаша заявка №{order.order_number} на сумму {order.total_amount} руб. принята.\nСтатус: {order.status.name}."
-    send_mail(subject, body, settings.DEFAULT_FROM_EMAIL, [order.customer.email])
-    EmailNotification.objects.create(
-        order=order,
-        recipient_email=order.customer.email,
-        subject=subject,
-        body=body
-    )
+    subject = f'Ваша заявка №{order.order_number} принята'
+    
+    items_list = ''
+    for item in order.items.all():
+        items_list += f'- {item.bearing.name} x {item.quantity} = {item.price_at_order * item.quantity} руб.\n'
+    
+    message = f'''
+Здравствуйте, {order.customer.name}!
+
+Ваша заявка №{order.order_number} успешно создана.
+
+Состав заказа:
+{items_list}
+
+Итого к оплате: {order.total_amount} руб.
+
+Статус заявки: {order.status.name}
+
+Спасибо за покупку!
+'''
+    
+    try:
+        send_mail(
+            subject=subject,
+            message=message.strip(),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[order.customer.email],
+            fail_silently=False,
+        )
+        
+        EmailNotification.objects.create(
+            order=order,
+            recipient_email=order.customer.email,
+            subject=subject,
+            body=message
+        )
+        print(f"Уведомление отправлено на {order.customer.email}")
+        
+    except Exception as e:
+        print(f"Ошибка отправки email: {e}")
