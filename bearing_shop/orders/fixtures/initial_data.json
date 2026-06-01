@@ -1,0 +1,36 @@
+[
+  {"model": "orders.bearingtype", "pk": 1, "fields": {"name": "шариковый"}},
+  {"model": "orders.bearingtype", "pk": 2, "fields": {"name": "роликовый"}},
+  {"model": "orders.bearingtype", "pk": 3, "fields": {"name": "игольчатый"}},
+  {"model": "orders.bearingtype", "pk": 4, "fields": {"name": "радиальный"}},
+  {"model": "orders.bearingtype", "pk": 5, "fields": {"name": "упорный"}},
+  {"model": "orders.bearingtype", "pk": 6, "fields": {"name": "радиально-упорный"}},
+
+  {"model": "orders.precisionclass", "pk": 1, "fields": {"code": 0, "description": "Обычный класс"}},
+  {"model": "orders.precisionclass", "pk": 2, "fields": {"code": 6, "description": "Повышенной точности"}},
+  {"model": "orders.precisionclass", "pk": 3, "fields": {"code": 5, "description": "Высокой точности"}},
+  {"model": "orders.precisionclass", "pk": 4, "fields": {"code": 4, "description": "Особо высокой точности"}},
+  {"model": "orders.precisionclass", "pk": 5, "fields": {"code": 3, "description": "Сверхвысокой точности"}},
+  {"model": "orders.precisionclass", "pk": 6, "fields": {"code": 2, "description": "Особо точные"}},
+
+  {"model": "orders.sealtype", "pk": 1, "fields": {"name": "открытый"}},
+  {"model": "orders.sealtype", "pk": 2, "fields": {"name": "металлические шайбы"}},
+  {"model": "orders.sealtype", "pk": 3, "fields": {"name": "резиновые шайбы"}},
+
+  {"model": "orders.material", "pk": 1, "fields": {"name": "подшипниковая сталь"}},
+  {"model": "orders.material", "pk": 2, "fields": {"name": "нержавеющая сталь"}},
+  {"model": "orders.material", "pk": 3, "fields": {"name": "керамика"}},
+
+  {"model": "orders.manufacturer", "pk": 1, "fields": {"name": "HBB"}},
+  {"model": "orders.manufacturer", "pk": 2, "fields": {"name": "SKF"}},
+  {"model": "orders.manufacturer", "pk": 3, "fields": {"name": "FAG"}},
+  {"model": "orders.manufacturer", "pk": 4, "fields": {"name": "NSK"}},
+
+  {"model": "orders.orderstatus", "pk": 1, "fields": {"name": "Принята"}},
+  {"model": "orders.orderstatus", "pk": 2, "fields": {"name": "В обработке"}},
+  {"model": "orders.orderstatus", "pk": 3, "fields": {"name": "Счёт выставлен"}},
+  {"model": "orders.orderstatus", "pk": 4, "fields": {"name": "Счёт оплачен"}},
+  {"model": "orders.orderstatus", "pk": 5, "fields": {"name": "Отгружена"}},
+  {"model": "orders.orderstatus", "pk": 6, "fields": {"name": "Товар принят клиентом"}},
+  {"model": "orders.orderstatus", "pk": 7, "fields": {"name": "Отменена"}}
+]
