@@ -8,12 +8,13 @@ from .serializers import (
     BearingListSerializer, BearingDetailSerializer, 
     OrderCreateSerializer, OrderStatusSerializer,
     BearingTypeSerializer, ManufacturerSerializer,
-    MaterialSerializer, SealTypeSerializer, PrecisionClassSerializer
+    MaterialSerializer, SealTypeSerializer, PrecisionClassSerializer, OrderDetailSerializer, OrderListSerializer, OrderStatusUpdateSerializer
 )
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from django.db.models import Count, Sum, Q
 from rest_framework import status
 from .models import TechnicalDoc
 
@@ -119,3 +120,71 @@ class SealTypeListView(generics.ListAPIView):
 class PrecisionClassListView(generics.ListAPIView):
     queryset = PrecisionClass.objects.all()
     serializer_class = PrecisionClassSerializer
+
+#Для менеджера
+class OrdersListView(generics.ListAPIView):
+    """Список всех заявок (для менеджера)"""
+    serializer_class = OrderListSerializer
+    filter_backends = []
+    
+    def get_queryset(self):
+        queryset = Order.objects.select_related('customer', 'status').annotate(
+            items_count=Count('items'),
+            total_quantity=Sum('items__quantity')
+        ).order_by('-created_at')
+        
+        # Фильтрация
+        status_id = self.request.query_params.get('status_id')
+        if status_id:
+            queryset = queryset.filter(status_id=status_id)
+        
+        date_from = self.request.query_params.get('date_from')
+        if date_from:
+            queryset = queryset.filter(created_at__date__gte=date_from)
+        
+        date_to = self.request.query_params.get('date_to')
+        if date_to:
+            queryset = queryset.filter(created_at__date__lte=date_to)
+        
+        customer_email = self.request.query_params.get('customer_email')
+        if customer_email:
+            queryset = queryset.filter(customer__email__icontains=customer_email)
+        
+        order_number = self.request.query_params.get('order_number')
+        if order_number:
+            queryset = queryset.filter(order_number__icontains=order_number)
+        
+        return queryset
+
+
+class OrderDetailView(generics.RetrieveAPIView):
+    """Детальная информация о заявке"""
+    queryset = Order.objects.prefetch_related(
+        'items__bearing', 
+        'history__old_status', 
+        'history__new_status',
+        'customer'
+    )
+    serializer_class = OrderDetailSerializer
+    lookup_field = 'order_number'
+
+
+class OrderStatusUpdateView(generics.UpdateAPIView):
+    """Обновление статуса заявки"""
+    queryset = Order.objects.all()
+    serializer_class = OrderStatusUpdateSerializer
+    lookup_field = 'order_number'
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        
+        return Response({
+            'order_number': instance.order_number,
+            'status': instance.status.name,
+            'message': 'Статус успешно обновлён'
+        })
+

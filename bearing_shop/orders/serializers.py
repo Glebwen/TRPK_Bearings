@@ -5,31 +5,7 @@ from .models import (
     SealType, Material, Manufacturer, OrderStatus
 )
 from .utils import send_order_notification
-
-class BearingTypeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = BearingType
-        fields = ['id', 'name']
-
-class PrecisionClassSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PrecisionClass
-        fields = ['id', 'code']
-
-class SealTypeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = SealType
-        fields = ['id', 'name']
-
-class MaterialSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Material
-        fields = ['id', 'name']
-
-class ManufacturerSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Manufacturer
-        fields = ['id', 'name']
+from rest_framework import serializers as drf_serializers
 
 
 class TechnicalDocSerializer(serializers.ModelSerializer):
@@ -216,3 +192,109 @@ class PrecisionClassSerializer(serializers.ModelSerializer):
     class Meta:
         model = PrecisionClass
         fields = ['id', 'code']
+
+##Для менеджера
+class OrderListSerializer(serializers.ModelSerializer):
+    customer_name = serializers.CharField(source='customer.name', read_only=True)
+    customer_email = serializers.EmailField(source='customer.email', read_only=True)
+    status_name = serializers.CharField(source='status.name', read_only=True)
+    items_count = serializers.SerializerMethodField()
+    total_quantity = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Order
+        fields = [
+            'order_number', 
+            'customer_name', 
+            'customer_email',
+            'status_name', 
+            'total_amount', 
+            'items_count',
+            'total_quantity',
+            'created_at', 
+            'updated_at'
+        ]
+    
+    def get_items_count(self, obj):
+        return obj.items.count()
+    
+    def get_total_quantity(self, obj):
+        return sum(item.quantity for item in obj.items.all())
+    
+
+
+class OrderDetailSerializer(serializers.ModelSerializer):
+    """Детальная информация о заявке для менеджера"""
+    customer = serializers.SerializerMethodField()
+    status_name = serializers.CharField(source='status.name', read_only=True)
+    items = OrderItemSerializer(many=True, read_only=True)
+    status_history = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Order
+        fields = [
+            'order_number',
+            'customer',
+            'delivery_address',
+            'status_name',
+            'total_amount',
+            'items',
+            'status_history',
+            'created_at',
+            'updated_at'
+        ]
+    
+    def get_customer(self, obj):
+        return {
+            'id': obj.customer.id,
+            'name': obj.customer.name,
+            'organization': obj.customer.organization,
+            'phone': obj.customer.phone,
+            'email': obj.customer.email
+        }
+    
+
+class OrderStatusUpdateSerializer(serializers.ModelSerializer):
+    """Обновление статуса заявки"""
+    status_id = serializers.IntegerField(write_only=True)
+    comment = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    
+    class Meta:
+        model = Order
+        fields = ['status_id', 'comment']
+    
+    def validate_status_id(self, value):
+        try:
+            status = OrderStatus.objects.get(id=value)
+            return value
+        except OrderStatus.DoesNotExist:
+            raise serializers.ValidationError(f"Статус с id {value} не найден")
+    
+    def update(self, instance, validated_data):
+        old_status = instance.status
+        new_status = OrderStatus.objects.get(id=validated_data['status_id'])
+        
+        if old_status != new_status:
+            instance.status = new_status
+            instance.save()
+            
+            # Сохраняем историю
+            StatusHistory.objects.create(
+                order=instance,
+                old_status=old_status,
+                new_status=new_status
+            )
+            
+            # Отправляем уведомление об изменении статуса
+            # send_status_notification(instance, validated_data.get('comment'))
+        
+        return instance
+    
+
+class OrderFilterSerializer(drf_serializers.Serializer):
+    """Сериализатор для фильтрации заявок"""
+    status_id = drf_serializers.IntegerField(required=False)
+    date_from = drf_serializers.DateField(required=False)
+    date_to = drf_serializers.DateField(required=False)
+    customer_email = drf_serializers.EmailField(required=False)
+    order_number = drf_serializers.CharField(required=False)
