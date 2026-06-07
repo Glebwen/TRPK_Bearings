@@ -43,3 +43,42 @@ def send_order_notification(order):
         
     except Exception as e:
         print(f"Ошибка отправки email: {e}")
+
+def send_status_notification(order, old_status, new_status):
+    """Отправка уведомления клиенту при изменении статуса заявки"""
+    
+    subject = f'Статус заявки №{order.order_number} изменён'
+    
+    message = f'''
+Здравствуйте, {order.customer.name}!
+
+Статус вашей заявки №{order.order_number} был изменён.
+
+Старый статус: {old_status.name}
+Новый статус: {new_status.name}
+Сумма заказа: {order.total_amount} руб.
+
+С уважением,
+Магазин подшипников
+'''
+    
+    try:
+        send_mail(
+            subject=subject,
+            message=message.strip(),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[order.customer.email],
+            fail_silently=False,
+        )
+        
+        # Сохраняем уведомление в БД
+        EmailNotification.objects.create(
+            order=order,
+            recipient_email=order.customer.email,
+            subject=subject,
+            body=message
+        )
+        print(f"✓ Уведомление отправлено на {order.customer.email}")
+        
+    except Exception as e:
+        print(f"✗ Ошибка отправки email: {e}")

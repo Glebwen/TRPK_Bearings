@@ -2,13 +2,14 @@ from rest_framework import generics, filters
 from django.db.models import Q
 from .models import (
     Bearing, Order, BearingType, Manufacturer, Material, 
-    SealType, PrecisionClass
+    SealType, PrecisionClass, OrderStatus
 )
 from .serializers import (
     BearingListSerializer, BearingDetailSerializer, 
     OrderCreateSerializer, OrderStatusSerializer,
     BearingTypeSerializer, ManufacturerSerializer,
-    MaterialSerializer, SealTypeSerializer, PrecisionClassSerializer, OrderDetailSerializer, OrderListSerializer, OrderStatusUpdateSerializer
+    MaterialSerializer, SealTypeSerializer, PrecisionClassSerializer, OrderDetailSerializer, OrderListSerializer,
+    OrderStatusUpdateSerializer, OrderStatusSimpleSerializer, OrderAssignManagerSerializer
 )
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
@@ -188,3 +189,31 @@ class OrderStatusUpdateView(generics.UpdateAPIView):
             'message': 'Статус успешно обновлён'
         })
 
+class OrderStatusListView(generics.ListAPIView):
+    """Список всех статусов заявок"""
+    queryset = OrderStatus.objects.all()
+    serializer_class = OrderStatusSimpleSerializer
+
+class OrderAssignManagerView(generics.UpdateAPIView):
+    """Назначение менеджера на заявку"""
+    queryset = Order.objects.all()
+    serializer_class = OrderAssignManagerSerializer
+    lookup_field = 'order_number'
+    
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        
+        manager_name = instance.manager.get_full_name() or instance.manager.username if instance.manager else None
+        
+        return Response({
+            'order_number': instance.order_number,
+            'manager': {
+                'id': instance.manager.id if instance.manager else None,
+                'name': manager_name
+            },
+            'message': 'Менеджер успешно назначен'
+        })

@@ -206,6 +206,26 @@
               </div>
             </div>
           </div>
+          <div class="info-section">
+  <h3>Ответственный менеджер</h3>
+  <div class="manager-info">
+    <div class="current-manager" v-if="selectedOrder.manager">
+      <span class="label">Текущий менеджер:</span>
+      <span class="manager-name">{{ selectedOrder.manager.name }}</span>
+      <span class="manager-email">{{ selectedOrder.manager.email }}</span>
+    </div>
+    <div class="no-manager" v-else>
+      <span class="label">Ответственный не назначен</span>
+    </div>
+    <button 
+      class="btn-take" 
+      @click="takeResponsibility"
+      :disabled="isCurrentUserManager"
+    >
+      {{ isCurrentUserManager ? 'Вы уже ответственный' : 'Назначить меня ответственным' }}
+    </button>
+  </div>
+</div>
 
           <!-- Товары -->
           <div class="info-section">
@@ -259,6 +279,8 @@ export default {
     const totalPages = ref(1)
     const selectedOrder = ref(null)
     const newStatusId = ref('')
+    const currentManagerId = ref(null)
+    const currentManagerName = ref('')
 
     // Фильтры
     const filters = reactive({
@@ -322,6 +344,47 @@ export default {
         alert('Не удалось загрузить детали заявки')
       }
     }
+
+    const getCurrentManager = async () => {
+      try {
+        // Временно для теста - замените на реальный ID менеджера
+        currentManagerId.value = 1
+        currentManagerName.value = 'Администратор'
+        
+        // Реальная реализация:
+        // const response = await axios.get(`${API_BASE_URL}/me/`)
+        // currentManagerId.value = response.data.id
+        // currentManagerName.value = response.data.full_name || response.data.username
+      } catch (error) {
+        console.error('Ошибка при получении данных менеджера:', error)
+      }
+    }
+
+    const takeResponsibility = async () => {
+      if (!selectedOrder.value) return
+      
+      try {
+        await axios.patch(`${API_BASE_URL}/orders/${selectedOrder.value.order_number}/assign-manager/`, {
+          manager_id: currentManagerId.value
+        })
+        
+        alert(`Вы назначены ответственным за заявку ${selectedOrder.value.order_number}`)
+        
+        selectedOrder.value.manager = {
+          id: currentManagerId.value,
+          name: currentManagerName.value
+        }
+        
+        await fetchOrders()
+      } catch (error) {
+        console.error('Ошибка при назначении ответственного:', error)
+        alert('Не удалось назначить ответственного')
+      }
+    }
+    const isCurrentUserManager = computed(() => {
+  return selectedOrder.value?.manager?.id === currentManagerId.value
+})
+
 
     const confirmStatusChange = () => {
       if (confirm(`Изменить статус с "${selectedOrder.value.status_name}" на "${getStatusName(newStatusId.value)}"?`)) {
@@ -445,6 +508,7 @@ export default {
     onMounted(() => {
       fetchStatuses()
       fetchOrders()
+      getCurrentManager()
     })
 
     return {
@@ -469,7 +533,11 @@ export default {
       formatPrice,
       formatDate,
       getStatusClass,
-      displayedPages
+      takeResponsibility,
+      displayedPages,
+      currentManagerName,
+      isCurrentUserManager
+
     }
   }
 }
@@ -921,5 +989,76 @@ export default {
   font-weight: 700;
   font-size: 18px;
   color: #2b6cb0;
+}
+
+.action-bar {
+  margin-bottom: 20px;
+  display: flex;
+  gap: 12px;
+}
+
+.btn-take-responsibility {
+  padding: 8px 20px;
+  background-color: #4299e1;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.btn-take-responsibility:hover {
+  background-color: #3182ce;
+}
+
+.manager-info {
+  background-color: #f7fafc;
+  padding: 16px;
+  border-radius: 8px;
+}
+
+.current-manager, .no-manager {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.manager-name {
+  font-weight: 600;
+  color: #2b6cb0;
+}
+
+.manager-email {
+  color: #718096;
+  font-size: 14px;
+}
+
+.btn-take {
+  padding: 6px 16px;
+  background-color: #48bb78;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.btn-take:hover:not(:disabled) {
+  background-color: #38a169;
+}
+
+.btn-take:disabled {
+  background-color: #a0aec0;
+  cursor: not-allowed;
+}
+
+.label {
+  font-weight: 500;
+  color: #4a5568;
 }
 </style>

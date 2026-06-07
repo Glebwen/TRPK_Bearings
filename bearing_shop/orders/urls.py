@@ -2,7 +2,7 @@ from django.urls import path
 from .views import (
     BearingListView, BearingDetailView, OrderCreateView, OrderStatusView,
     BearingTypeListView, ManufacturerListView, MaterialListView,
-    SealTypeListView, PrecisionClassListView, download_document, OrdersListView, OrderDetailView, OrderStatusUpdateView
+    SealTypeListView, PrecisionClassListView, download_document, OrdersListView, OrderDetailView, OrderStatusUpdateView, OrderStatusListView, OrderAssignManagerView
 )
 urlpatterns = [
     # Подшипники
@@ -15,6 +15,7 @@ urlpatterns = [
     path('orders/detail/<str:order_number>/', OrderDetailView.as_view(), name='order-detail'),  # GET - детали
     path('orders/<str:order_number>/status/', OrderStatusView.as_view(), name='order-status'),  # GET - статус
     path('orders/<str:order_number>/update-status/', OrderStatusUpdateView.as_view(), name='order-update-status'),  # PATCH - обновить статус
+    path('orders/<str:order_number>/assign-manager/', OrderAssignManagerView.as_view(), name='order-assign-manager'),
     
     # Справочники
     path('dictionaries/types/', BearingTypeListView.as_view(), name='bearing-types'),
@@ -27,5 +28,5 @@ urlpatterns = [
     path('docs/download/<int:doc_id>/', download_document, name='download-document'),
     
     # Статусы (если нужен отдельный эндпоинт)
-    # path('order-statuses/', OrderStatusListView.as_view(), name='order-statuses'),
+    path('order-statuses/', OrderStatusListView.as_view(), name='order-statuses'),
 ]

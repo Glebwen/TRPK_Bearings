@@ -4,7 +4,7 @@ from .models import (
     StatusHistory, EmailNotification, BearingType, PrecisionClass,
     SealType, Material, Manufacturer, OrderStatus
 )
-from .utils import send_order_notification
+from .utils import send_order_notification, send_status_notification
 from rest_framework import serializers as drf_serializers
 from django.contrib.auth.models import User
 
@@ -304,10 +304,16 @@ class OrderStatusUpdateSerializer(serializers.ModelSerializer):
                 new_status=new_status
             )
             
-            # Отправляем уведомление об изменении статуса
-            # send_status_notification(instance, validated_data.get('comment'))
+            #Отправляем уведомление об изменении статуса
+            send_status_notification(instance, old_status, new_status)
         
         return instance
+    
+class OrderStatusSimpleSerializer(serializers.ModelSerializer):
+    """Простой сериализатор для статусов"""
+    class Meta:
+        model = OrderStatus
+        fields = ['id', 'name']
     
 
 class OrderFilterSerializer(drf_serializers.Serializer):
@@ -330,6 +336,15 @@ class OrderAssignManagerSerializer(serializers.Serializer):
             return value
         except User.DoesNotExist:
             raise serializers.ValidationError("Менеджер не найден")
+    
+    def update(self, instance, validated_data):
+        """Обновление заявки - назначение менеджера"""
+        instance.manager_id = validated_data['manager_id']
+        instance.save()
+        return instance
+    
+    def create(self, validated_data):
+        pass
         
 
 class UserSerializer(serializers.ModelSerializer):
