@@ -1,6 +1,9 @@
 from django.db import models
 from django.core.validators import MinValueValidator, RegexValidator
-import re
+from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
 
 class BearingType(models.Model):
     name = models.CharField(max_length=50, unique=True, verbose_name="Тип подшипника")
@@ -84,6 +87,15 @@ class Customer(models.Model):
 class Order(models.Model):
     order_number = models.CharField(max_length=20, unique=True, editable=False, verbose_name="Номер заявки")
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT, verbose_name="Клиент")
+    manager = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='managed_orders',
+        verbose_name="Ответственный менеджер",
+        limit_choices_to={'profile__role__in': ['admin', 'manager']}
+    )
     delivery_address = models.TextField(blank=True, null=True, verbose_name="Адрес доставки")
     status = models.ForeignKey(OrderStatus, on_delete=models.PROTECT, default=1, verbose_name="Статус")  # 1 = "Принята"
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(0)], verbose_name="Итоговая сумма")
@@ -127,3 +139,33 @@ class EmailNotification(models.Model):
     sent_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата отправки")
     class Meta:
         verbose_name_plural = "Email уведомления"
+
+class Profile(models.Model):
+    ROLE_CHOICES = [
+        ('admin', 'Администратор'),
+        ('manager', 'Менеджер'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile', verbose_name="Пользователь")
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='manager', verbose_name="Роль")
+    phone = models.CharField(max_length=20, blank=True, verbose_name="Телефон")
+    department = models.CharField(max_length=100, blank=True, verbose_name="Отдел")
+    is_active = models.BooleanField(default=True, verbose_name="Активен")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    
+    class Meta:
+        verbose_name = "Профиль пользователя"
+        verbose_name_plural = "Профили пользователей"
+    
+    def __str__(self):
+        return f"{self.user.get_full_name() or self.user.username} ({self.get_role_display()})"
+
+# Автоматическое создание профиля при создании пользователя
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    instance.profile.save()

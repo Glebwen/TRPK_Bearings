@@ -6,6 +6,8 @@ from .models import (
 )
 from .utils import send_order_notification
 from rest_framework import serializers as drf_serializers
+from django.contrib.auth.models import User
+
 
 
 class TechnicalDocSerializer(serializers.ModelSerializer):
@@ -199,6 +201,7 @@ class OrderListSerializer(serializers.ModelSerializer):
     customer_email = serializers.EmailField(source='customer.email', read_only=True)
     status_name = serializers.CharField(source='status.name', read_only=True)
     items_count = serializers.SerializerMethodField()
+    manager_name = serializers.SerializerMethodField()
     total_quantity = serializers.SerializerMethodField()
     
     class Meta:
@@ -210,6 +213,7 @@ class OrderListSerializer(serializers.ModelSerializer):
             'status_name', 
             'total_amount', 
             'items_count',
+            'manager_name',
             'total_quantity',
             'created_at', 
             'updated_at'
@@ -221,6 +225,11 @@ class OrderListSerializer(serializers.ModelSerializer):
     def get_total_quantity(self, obj):
         return sum(item.quantity for item in obj.items.all())
     
+    def get_manager_name(self, obj):
+        if obj.manager:
+            return obj.manager.get_full_name() or obj.manager.username
+        return "Не назначен"
+    
 
 
 class OrderDetailSerializer(serializers.ModelSerializer):
@@ -229,6 +238,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     status_name = serializers.CharField(source='status.name', read_only=True)
     items = OrderItemSerializer(many=True, read_only=True)
     status_history = serializers.SerializerMethodField()
+    manager = serializers.SerializerMethodField()
     
     class Meta:
         model = Order
@@ -239,6 +249,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             'status_name',
             'total_amount',
             'items',
+            'manager',
             'status_history',
             'created_at',
             'updated_at'
@@ -298,3 +309,28 @@ class OrderFilterSerializer(drf_serializers.Serializer):
     date_to = drf_serializers.DateField(required=False)
     customer_email = drf_serializers.EmailField(required=False)
     order_number = drf_serializers.CharField(required=False)
+
+class OrderAssignManagerSerializer(serializers.Serializer):
+    """Сериализатор для назначения менеджера на заявку"""
+    manager_id = serializers.IntegerField()
+    
+    def validate_manager_id(self, value):
+        try:
+            user = User.objects.get(id=value)
+            if user.profile.role not in ['admin', 'manager']:
+                raise serializers.ValidationError("Пользователь не является менеджером или администратором")
+            return value
+        except User.DoesNotExist:
+            raise serializers.ValidationError("Менеджер не найден")
+        
+
+class UserSerializer(serializers.ModelSerializer):
+    role = serializers.CharField(source='profile.role', read_only=True)
+    full_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'full_name', 'role']
+    
+    def get_full_name(self, obj):
+        return obj.get_full_name() or obj.username
