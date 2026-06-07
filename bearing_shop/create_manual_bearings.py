@@ -58,7 +58,7 @@ def create_bearing(article, name, bearing_type, inner_d, outer_d, height, precis
             'seal_type': seal,
             'material': material,
             'manufacturer': manufacturer,
-            'image_url': '',
+            'image': '',
         }
     )
     BearingStock.objects.update_or_create(

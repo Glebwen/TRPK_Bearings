@@ -237,7 +237,7 @@ class OrderDetailSerializer(serializers.ModelSerializer):
     customer = serializers.SerializerMethodField()
     status_name = serializers.CharField(source='status.name', read_only=True)
     items = OrderItemSerializer(many=True, read_only=True)
-    status_history = serializers.SerializerMethodField()
+    #status_history = serializers.SerializerMethodField()
     manager = serializers.SerializerMethodField()
     
     class Meta:
@@ -250,7 +250,6 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             'total_amount',
             'items',
             'manager',
-            'status_history',
             'created_at',
             'updated_at'
         ]
@@ -263,6 +262,15 @@ class OrderDetailSerializer(serializers.ModelSerializer):
             'phone': obj.customer.phone,
             'email': obj.customer.email
         }
+    
+    def get_manager(self, obj):  
+        if hasattr(obj, 'manager') and obj.manager:
+            return {
+                'id': obj.manager.id,
+                'name': obj.manager.get_full_name() or obj.manager.username,
+                'email': obj.manager.email
+            }
+        return None
     
 
 class OrderStatusUpdateSerializer(serializers.ModelSerializer):

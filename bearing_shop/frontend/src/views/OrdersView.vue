@@ -270,7 +270,7 @@ export default {
     })
 
     // API базовый URL
-    const API_BASE_URL = 'http://localhost:8000/api' // Замените на ваш URL
+    const API_BASE_URL = 'http://localhost:8000/api/v1' // Замените на ваш URL
 
     // Методы
     const fetchOrders = async () => {
@@ -285,7 +285,7 @@ export default {
           if (!params[key]) delete params[key]
         })
 
-        const response = await axios.get(`${API_BASE_URL}/orders/`, { params })
+        const response = await axios.get(`${API_BASE_URL}/orders/list/`, { params })
         
         // Если API возвращает пагинированный ответ
         if (response.data.results) {
@@ -314,7 +314,7 @@ export default {
 
     const viewOrderDetail = async (orderNumber) => {
       try {
-        const response = await axios.get(`${API_BASE_URL}/orders/${orderNumber}/`)
+        const response = await axios.get(`${API_BASE_URL}/orders/detail/${orderNumber}/`)
         selectedOrder.value = response.data
         newStatusId.value = ''
       } catch (error) {
