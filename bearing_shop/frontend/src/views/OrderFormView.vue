@@ -115,7 +115,7 @@ const submitOrder = async () => {
   }
 
   try {
-    const res = await axios.post('/api/v1/orders/', payload)
+    const res = await axios.post('/api/v1/orders/create/', payload)
     alert(`✅ Заявка №${res.data.order_number} успешно создана! Статус: ${res.data.status}`)
     clearCart()
     router.push('/')
