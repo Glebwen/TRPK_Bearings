@@ -1,15 +1,22 @@
 from rest_framework import generics, filters
 from django.db.models import Q
 from .models import (
-    Bearing, Order, BearingType, Manufacturer, Material, 
-    SealType, PrecisionClass, OrderStatus
+    Order,
+    OrderStatus,
+    Bearing,
+    BearingStock,
+    BearingType,
+    PrecisionClass,
+    SealType,
+    Material,
+    Manufacturer
 )
 from .serializers import (
     BearingListSerializer, BearingDetailSerializer, 
     OrderCreateSerializer, OrderStatusSerializer,
     BearingTypeSerializer, ManufacturerSerializer,
     MaterialSerializer, SealTypeSerializer, PrecisionClassSerializer, OrderDetailSerializer, OrderListSerializer,
-    OrderStatusUpdateSerializer, OrderStatusSimpleSerializer, OrderAssignManagerSerializer
+    OrderStatusUpdateSerializer, OrderStatusSimpleSerializer, OrderAssignManagerSerializer, BearingImageSerializer
 )
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
@@ -18,6 +25,10 @@ from rest_framework.response import Response
 from django.db.models import Count, Sum, Q
 from rest_framework import status
 from .models import TechnicalDoc
+from rest_framework.views import APIView
+import openpyxl
+
+from .models import BearingStock
 
 @api_view(['GET'])
 def download_document(request, doc_id):
@@ -216,4 +227,190 @@ class OrderAssignManagerView(generics.UpdateAPIView):
                 'name': manager_name
             },
             'message': 'Менеджер успешно назначен'
+        })
+
+class ImportXlsxView(APIView):
+
+    def post(self, request):
+
+        file = request.FILES.get("file")
+
+        if not file:
+            return Response(
+                {"error": "Файл не выбран"},
+                status=400
+            )
+
+        wb = openpyxl.load_workbook(file)
+        sheet = wb.active
+
+        created_count = 0
+        updated_count = 0
+        skipped_count = 0
+
+        for row in sheet.iter_rows(min_row=2, values_only=True):
+            print("ROW =", row)
+
+            try:
+
+                article = str(row[0]).strip() if row[0] else None
+                name = str(row[1]).strip() if row[1] else None
+
+                if not article or not name:
+                    skipped_count += 1
+                    continue
+
+                type_name = str(row[2]).strip()
+                inner_diameter = int(row[3] or 1)
+                outer_diameter = int(row[4] or 1)
+                height = int(row[5] or 1)
+
+                precision_code = int(row[6] or 0)
+
+                seal_name = str(row[7]).strip()
+                material_name = str(row[8]).strip()
+                manufacturer_name = str(row[9]).strip()
+
+                price = float(row[10] or 0)
+                stock_quantity = int(row[11] or 0)
+
+
+                bearing_type, _ = BearingType.objects.get_or_create(
+                    name=type_name
+                )
+
+                precision, _ = PrecisionClass.objects.get_or_create(
+                    code=precision_code
+                )
+
+                seal, _ = SealType.objects.get_or_create(
+                    name=seal_name
+                )
+
+                material, _ = Material.objects.get_or_create(
+                    name=material_name
+                )
+
+                manufacturer, _ = Manufacturer.objects.get_or_create(
+                    name=manufacturer_name
+                )
+
+
+                bearing, created = Bearing.objects.get_or_create(
+                    article=article,
+                    defaults={
+                        "name": name,
+                        "type": bearing_type,
+                        "inner_diameter": inner_diameter,
+                        "outer_diameter": outer_diameter,
+                        "height": height,
+                        "precision_class": precision,
+                        "seal_type": seal,
+                        "material": material,
+                        "manufacturer": manufacturer,
+                    }
+                )
+
+                if created:
+
+                    created_count += 1
+
+                else:
+
+                    bearing.name = name
+                    bearing.type = bearing_type
+                    bearing.inner_diameter = inner_diameter
+                    bearing.outer_diameter = outer_diameter
+                    bearing.height = height
+                    bearing.precision_class = precision
+                    bearing.seal_type = seal
+                    bearing.material = material
+                    bearing.manufacturer = manufacturer
+
+                    bearing.save()
+
+                    updated_count += 1
+
+                BearingStock.objects.update_or_create(
+                    bearing=bearing,
+                    defaults={
+                        "price": price,
+                        "stock_quantity": stock_quantity
+                    }
+                )
+
+            except Exception as e:
+
+                print(
+                    f"Ошибка импорта строки {row}: {e}"
+                )
+
+                skipped_count += 1
+
+        return Response({
+            "created": created_count,
+            "updated": updated_count,
+            "skipped": skipped_count
+        })
+
+class BearingImageListView(generics.ListAPIView):
+
+    serializer_class = BearingImageSerializer
+
+    def get_queryset(self):
+
+        return Bearing.objects.filter(
+            image__isnull=False
+        ).exclude(
+            image=""
+        )
+        
+class UploadBearingImageView(APIView):
+
+    def post(self, request):
+
+        bearing_id = request.data.get("bearing_id")
+        image = request.FILES.get("image")
+
+        if not bearing_id:
+            return Response(
+                {"error": "Не выбран подшипник"},
+                status=400
+            )
+
+        if not image:
+            return Response(
+                {"error": "Файл не выбран"},
+                status=400
+            )
+
+        bearing = get_object_or_404(
+            Bearing,
+            id=bearing_id
+        )
+
+        bearing.image = image
+        bearing.save()
+
+        return Response({
+            "message": "Изображение загружено"
+        })
+        
+class DeleteBearingImageView(APIView):
+
+    def delete(self, request, pk):
+
+        bearing = get_object_or_404(
+            Bearing,
+            pk=pk
+        )
+
+        if bearing.image:
+            bearing.image.delete()
+
+        bearing.image = None
+        bearing.save()
+
+        return Response({
+            "message": "Изображение удалено"
         })

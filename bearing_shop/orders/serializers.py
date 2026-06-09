@@ -357,3 +357,26 @@ class UserSerializer(serializers.ModelSerializer):
     
     def get_full_name(self, obj):
         return obj.get_full_name() or obj.username
+
+class BearingImageSerializer(serializers.ModelSerializer):
+
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Bearing
+        fields = [
+            "id",
+            "article",
+            "name",
+            "image_url",
+            "created_at"
+        ]
+
+    def get_image_url(self, obj):
+
+        request = self.context.get("request")
+
+        if obj.image:
+            return request.build_absolute_uri(obj.image.url)
+
+        return None

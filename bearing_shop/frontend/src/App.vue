@@ -14,11 +14,16 @@ import { RouterLink, RouterView } from 'vue-router'
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
           <ul class="navbar-nav ms-auto">
-            <li class="nav-item">
+            <!-- <li class="nav-item">
               <RouterLink class="nav-link" to="/cart">🛒 Корзина</RouterLink>
-            </li>
-            <li class="nav-item">
+            </li> -->
+            <!-- <li class="nav-item">
               <RouterLink class="nav-link" to="/orders">Менеджер</RouterLink>
+            </li> -->
+            <li class="nav-item">
+              <RouterLink class="nav-link" to="/admin/import">
+                Администратор
+              </RouterLink>
             </li>
           </ul>
         </div>

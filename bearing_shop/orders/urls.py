@@ -2,8 +2,11 @@ from django.urls import path
 from .views import (
     BearingListView, BearingDetailView, OrderCreateView, OrderStatusView,
     BearingTypeListView, ManufacturerListView, MaterialListView,
-    SealTypeListView, PrecisionClassListView, download_document, OrdersListView, OrderDetailView, OrderStatusUpdateView, OrderStatusListView, OrderAssignManagerView
+    SealTypeListView, PrecisionClassListView, download_document, OrdersListView, OrderDetailView, OrderStatusUpdateView, OrderStatusListView, OrderAssignManagerView, ImportXlsxView, BearingImageListView, UploadBearingImageView, DeleteBearingImageView
 )
+from django.conf import settings
+from django.conf.urls.static import static
+
 urlpatterns = [
     # Подшипники
     path('bearings/', BearingListView.as_view(), name='bearing-list'),
@@ -29,4 +32,29 @@ urlpatterns = [
     
     # Статусы (если нужен отдельный эндпоинт)
     path('order-statuses/', OrderStatusListView.as_view(), name='order-statuses'),
+    
+    path(
+    'admin/import-xlsx/',
+    ImportXlsxView.as_view(),
+    name='import-xlsx'
+),
+path(
+    "admin/images/",
+    BearingImageListView.as_view()
+),
+
+path(
+    "admin/images/upload/",
+    UploadBearingImageView.as_view()
+),
+
+path(
+    "admin/images/<int:pk>/",
+    DeleteBearingImageView.as_view()
+),
 ]
+
+urlpatterns += static(
+    settings.MEDIA_URL,
+    document_root=settings.MEDIA_ROOT
+)
